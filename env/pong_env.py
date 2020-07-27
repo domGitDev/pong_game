@@ -7,7 +7,7 @@ import numpy as np
 class PongEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 50
+        'video.frames_per_second': 24
     }
 
     def __init__(self):
@@ -184,7 +184,7 @@ class PongEnv(gym.Env):
         cartx = x[1]
         carty = x[2] # MIDDLE OF CART
         self.balltrans.set_translation(cartx, carty)
-        
+
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):

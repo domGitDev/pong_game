@@ -7,7 +7,7 @@ import numpy as np
 class PongEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 24
+        'video.frames_per_second': 50
     }
 
     def __init__(self):
@@ -28,15 +28,14 @@ class PongEnv(gym.Env):
         self.carttrans = None
         self.balltrans = None
         self.x_threshold = 2.4
+        self.scores = 0
         
         low = np.array([self.cartwidth/2,
-                        self.cartheight/2,
                         0,
                         self.ballheight/2],
                         dtype=np.float32)
 
-        high = np.array([self.width,
-                        self.height,
+        high = np.array([self.width-self.cartwidth/2,
                         self.width,
                         self.height],
                         dtype=np.float32)
@@ -60,7 +59,7 @@ class PongEnv(gym.Env):
 
         done = 0
         is_score = False
-        x, y, bx, by = self.state
+        x, bx, by = self.state
         
         if action == 0:
             x = x - self.cart_change_x 
@@ -93,10 +92,13 @@ class PongEnv(gym.Env):
             self.ball_change_y = self.ball_change_y * -1
             done = True  
 
-        self.state = (x, y, bx, by)
+        self.state = (x, bx, by)
 
         if is_score:
             reward = 1.0
+            self.scores = self.scores + 1
+            print('Rewarded 1.0')
+            print('Scores', self.scores)
         elif self.steps_beyond_done is None:
             # ball touches the bottom
             self.steps_beyond_done = 0
@@ -111,27 +113,25 @@ class PongEnv(gym.Env):
                 )
             self.steps_beyond_done += 1
             reward = 0.0
+            self.scores = 0
 
-        if done:
-            self.reset()
+        #if done:
+        #    self.reset()
             
         return np.array(self.state), reward, done, {}
 
     def reset(self):
         if self.cart_pos:
             rand_x = np.random.randint(-300, high=300, size=1)
-            self.state = (self.cart_pos[0], self.cart_pos[1], 
-                        self.ball_pos[0]-rand_x[0], self.ball_pos[1])
+            self.state = (self.cart_pos[0], self.ball_pos[0]-rand_x[0], self.ball_pos[1])
         else:
-            self.state = self.np_random.uniform(low=-10, high=10, size=(4,))
+            self.state = self.np_random.uniform(low=-10, high=10, size=(3,))
 
         self.steps_beyond_done = None
         return np.array(self.state)
 
     def render(self, mode='human'):
-        
         world_width = self.x_threshold * 2
-        scale = self.width/world_width
         carty = 10  # TOP OF CART
         
         if self.viewer is None:
@@ -163,8 +163,7 @@ class PongEnv(gym.Env):
             self.ball_pos = self.balltrans.translation
             self.ball_pos = (self.ball_pos[0] - rand_x[0], self.ball_pos[1])
             
-            self.state = (self.cart_pos[0], 
-                        self.cart_pos[1], 
+            self.state = (self.cart_pos[0],
                         self.ball_pos[0], 
                         self.ball_pos[1])
 
@@ -182,10 +181,10 @@ class PongEnv(gym.Env):
         cartx = x[0]
         self.carttrans.set_translation(x[0], carty)
 
-        cartx = x[2]
-        carty = x[3] # MIDDLE OF CART
+        cartx = x[1]
+        carty = x[2] # MIDDLE OF CART
         self.balltrans.set_translation(cartx, carty)
-
+        
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):

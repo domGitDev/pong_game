@@ -12,16 +12,16 @@ class PongEnv(gym.Env):
 
     def __init__(self):
         self.width = 400
-        self.height = 300
+        self.height = 400
 
         self.ballwidth = 15.0
         self.ballheight = 15.0
         self.cartwidth = 60.0
         self.cartheight = 20.0
 
-        self.cart_change_x = 3
-        self.ball_change_x = 3
-        self.ball_change_y = 3
+        self.cart_change_x = 5
+        self.ball_change_x = 5
+        self.ball_change_y = 5
         
         self.carttrans = None
         self.balltrans = None
@@ -29,7 +29,7 @@ class PongEnv(gym.Env):
         self.scores = 0
         
         # cart_x, ball_x, ball_y, x_diff, y_diff
-        high = np.array([self.width, 
+        high = np.array([self.width,
                         self.width, 
                         self.height, 
                         np.finfo(np.float32).max, 
@@ -71,9 +71,10 @@ class PongEnv(gym.Env):
 
         bx = bx + self.ball_change_x
         by = by + self.ball_change_y
+        cart_y = (self.cartheight + (self.cartheight // 2))
 
         if bx <= (self.ballwidth // 2):
-            bx = (self.ballwidth // 2) + 1
+            bx = (self.ballwidth // 2)
             self.ball_change_x = self.ball_change_x * -1
         elif bx >= (self.width - (self.ballwidth // 2)):
             bx = (self.width - (self.ballwidth // 2))
@@ -81,13 +82,14 @@ class PongEnv(gym.Env):
         elif by >= (self.height - (self.ballwidth // 2)):
             by = (self.height - (self.ballwidth // 2))
             self.ball_change_y = self.ball_change_y * -1
-        elif bx > (x - 50) and bx < (x + 50) and by == (self.cartheight+(self.ballheight+5)):
+        elif bx > (x - 50) and bx < (x + 50) and by >= (cart_y - 5) and by <= cart_y:
             self.ball_change_y = self.ball_change_y * -1
             done = False
             is_score = True
         elif by <= 0:
             self.ball_change_y = self.ball_change_y * -1
             done = True 
+            self.scores = 0
         
         if is_score:
             reward = 1.0
@@ -108,7 +110,6 @@ class PongEnv(gym.Env):
                 )
             self.steps_beyond_done += 1
             reward = 0.0
-            self.scores = 0
         
         self.state =(x, bx, by, bx-x, by-y)
         

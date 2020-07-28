@@ -6,7 +6,7 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 
 GAMMA = 0.95
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.1
 
 MEMORY_SIZE = 2000000
 BATCH_SIZE = 20

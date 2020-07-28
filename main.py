@@ -11,7 +11,6 @@ register(
     entry_point='env.pong_env:PongEnv'
 )
 
-
 if __name__ == '__main__':
 
     env = gym.make('cpong-v0')

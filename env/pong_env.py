@@ -71,7 +71,6 @@ class PongEnv(gym.Env):
 
         bx = bx + self.ball_change_x
         by = by + self.ball_change_y
-        cart_y = (self.cartheight + (self.cartheight // 2))
 
         if bx <= (self.ballwidth // 2):
             bx = (self.ballwidth // 2)
@@ -79,14 +78,14 @@ class PongEnv(gym.Env):
         elif bx >= (self.width - (self.ballwidth // 2)):
             bx = (self.width - (self.ballwidth // 2))
             self.ball_change_x = self.ball_change_x * -1
-        elif by >= (self.height - (self.ballwidth // 2)):
-            by = (self.height - (self.ballwidth // 2))
+        elif by >= (self.height - self.ballheight):
+            by = (self.height - self.ballheight)
             self.ball_change_y = self.ball_change_y * -1
-        elif bx > (x - 50) and bx < (x + 50) and by >= (cart_y - 5) and by <= cart_y:
+        elif bx > (x - 50) and bx < (x + 50) and by == (self.cartheight+10):
             self.ball_change_y = self.ball_change_y * -1
             done = False
             is_score = True
-        elif by <= 0:
+        elif by <= -self.ballheight:
             self.ball_change_y = self.ball_change_y * -1
             done = True 
             self.scores = 0
@@ -116,7 +115,7 @@ class PongEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(5,))
+        self.state = self.np_random.uniform(low=-100, high=100, size=(5,))
         self.steps_beyond_done = None
 
         if self.carttrans and self.balltrans:
@@ -140,12 +139,12 @@ class PongEnv(gym.Env):
             # cart agent or paddle
             l, r, t, b = -self.cartwidth / 2, self.cartwidth / 2, self.cartheight, 0
             cart = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-            self.carttrans = rendering.Transform(translation=(self.width/2, self.cartheight/2))
+            self.carttrans = rendering.Transform(translation=(self.width//2, self.cartheight//2))
             cart.add_attr(self.carttrans)
             self.viewer.add_geom(cart)
             
             # ball
-            l, r, t, b = -self.ballwidth / 2, self.ballwidth / 2, 0, -self.ballheight
+            l, r, t, b = -self.ballwidth / 2, self.ballwidth / 2, self.ballheight, 0
             ball = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             ball.set_color(.9, 0.2, 0)
 

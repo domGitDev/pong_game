@@ -29,6 +29,13 @@ class PongEnv(gym.Env):
         self.scores = 0
         
         # cart_x, ball_x, ball_y, x_diff, y_diff
+        low = np.array([0,
+                        0, 
+                        0, 
+                        np.finfo(np.float32).min, 
+                        np.finfo(np.float32).min], 
+                        dtype=np.float32)
+
         high = np.array([self.width,
                         self.width, 
                         self.height, 
@@ -36,8 +43,8 @@ class PongEnv(gym.Env):
                         np.finfo(np.float32).max], 
                         dtype=np.float32)
 
-        self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(-high, high, dtype=np.float32)
+        self.action_space = spaces.Discrete(2)
+        self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
         self.seed()
         self.viewer = None
@@ -61,7 +68,7 @@ class PongEnv(gym.Env):
 
         if action == 0:
             x = x - self.cart_change_x 
-        elif action == 2:
+        elif action == 1:
             x = x + self.cart_change_x
 
         if x <= (self.cartwidth // 2):

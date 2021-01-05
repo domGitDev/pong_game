@@ -19,7 +19,7 @@ class PongEnv(gym.Env):
         self.cartwidth = 60.0
         self.cartheight = 20.0
 
-        self.cart_change_x = 5
+        self.cart_change_x = 10
         self.ball_change_x = 5
         self.ball_change_y = 5
         
@@ -27,6 +27,7 @@ class PongEnv(gym.Env):
         self.balltrans = None
         self.x_threshold = 2.4
         self.scores = 0
+        self.collide = False
         
         # cart_x, ball_x, ball_y, x_diff, y_diff
         low = np.array([0,
@@ -43,7 +44,7 @@ class PongEnv(gym.Env):
                         np.finfo(np.float32).max], 
                         dtype=np.float32)
 
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
         self.seed()
@@ -60,15 +61,15 @@ class PongEnv(gym.Env):
         err_msg = "%r (%s) invalid" % (action, type(action))
         assert self.action_space.contains(action), err_msg
 
-        done = 0
-        is_score = False
-
+        done = False
         x, y = self.carttrans.translation
         bx, by = self.balltrans.translation
-
+        
         if action == 0:
+            pass
+        if action == 1:
             x = x - self.cart_change_x 
-        elif action == 1:
+        elif action == 2:
             x = x + self.cart_change_x
 
         if x <= (self.cartwidth // 2):
@@ -76,54 +77,25 @@ class PongEnv(gym.Env):
         if x >= (self.width - (self.cartwidth // 2)):
             x = (self.width - (self.cartwidth // 2))
 
-        bx = bx + self.ball_change_x
-        by = by + self.ball_change_y
+        self.carttrans.set_translation(x,y)
 
-        if bx <= (self.ballwidth // 2):
-            bx = (self.ballwidth // 2)
-            self.ball_change_x = self.ball_change_x * -1
-        elif bx >= (self.width - (self.ballwidth // 2)):
-            bx = (self.width - (self.ballwidth // 2))
-            self.ball_change_x = self.ball_change_x * -1
-        elif by >= (self.height - self.ballheight):
-            by = (self.height - self.ballheight)
-            self.ball_change_y = self.ball_change_y * -1
-        elif bx > (x - 50) and bx < (x + 50) and by == (self.cartheight+10):
-            self.ball_change_y = self.ball_change_y * -1
-            done = False
-            is_score = True
-        elif by <= -self.ballheight:
-            self.ball_change_y = self.ball_change_y * -1
-            done = True 
-            self.scores = 0
-        
-        if is_score:
-            reward = 1.0
-            self.scores = self.scores + 1
-            print('Rewarded 1.0')
-            print('Scores', self.scores)
-        elif self.steps_beyond_done is None:
-            # ball touches the bottom
-            self.steps_beyond_done = 0
-            reward = 1.0
-        else:
-            if self.steps_beyond_done == 0:
-                logger.warn(
-                    "You are calling 'step()' even though this "
-                    "environment has already returned done = True. You "
-                    "should always call 'reset()' once you receive 'done = "
-                    "True' -- any further steps are undefined behavior."
-                )
-            self.steps_beyond_done += 1
-            reward = 0.0
-        
-        self.state =(x, bx, by, bx-x, by-y)
-        
-        return np.array(self.state), reward, done, {}
+        if by <= -self.ballheight:
+            done = True
+        elif bx < (x - 50) or bx > (x + 50) and (by < self.cartheight) and self.collide:
+            self.collide = False
+        elif bx > (x - 50) and bx < (x + 50) and (by >= self.cartheight and  by <= self.cartheight+10):
+            self.scores += 1
+            self.collide = True
+
+        self.state = (x, bx, by, bx-x, by-y)
+
+        return np.array(self.state), self.scores, done, {}
 
     def reset(self):
+        self.scores = 0
+        self.wiewer = None
+        self.render(update=False)
         self.state = self.np_random.uniform(low=-100, high=100, size=(5,))
-        self.steps_beyond_done = None
 
         if self.carttrans and self.balltrans:
             self.carttrans.set_translation(self.width/2, self.cartheight/2)
@@ -133,10 +105,10 @@ class PongEnv(gym.Env):
             x, y = self.carttrans.translation
             bx, by = self.balltrans.translation
             self.state = (x, bx, by, bx-x, by-y)
-
+            
         return np.array(self.state)
 
-    def render(self, mode='human'):
+    def render(self, mode='human', update=True):
         carty = 10  # TOP OF CART
         
         if self.viewer is None:
@@ -165,14 +137,27 @@ class PongEnv(gym.Env):
             self.track.set_color(0, 0, 0)
             self.viewer.add_geom(self.track)
             
+        if update:
             x, y = self.carttrans.translation
             bx, by = self.balltrans.translation
-            self.state =(x, bx, by, bx-x, by-y)
+            bx = bx + self.ball_change_x
+            by = by + self.ball_change_y
 
-        t = self.state
-        y = self.carttrans.translation[1]
-        self.carttrans.set_translation(t[0], y)
-        self.balltrans.set_translation(t[1], t[2])
+            if bx > (x - 50) and bx < (x + 50) and (by >= self.cartheight and by <= self.cartheight+10):
+                self.ball_change_y = abs(self.ball_change_y)
+            elif bx <= (self.ballwidth // 2):
+                bx = (self.ballwidth // 2)
+                self.ball_change_x = self.ball_change_x * -1
+            elif bx >= (self.width - (self.ballwidth // 2)):
+                bx = (self.width - (self.ballwidth // 2))
+                self.ball_change_x = self.ball_change_x * -1
+            elif by >= (self.height - self.ballheight):
+                by = (self.height - self.ballheight)
+                self.ball_change_y = self.ball_change_y * -1
+            elif by <= -self.ballheight:
+                self.ball_change_y = self.ball_change_y * -1
+
+            self.balltrans.set_translation(bx, by)
 
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 

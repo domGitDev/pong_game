@@ -16,8 +16,7 @@ class DQNSolver:
         self.exploring = ''
 
         self.action_space = num_actions
-
-        init = tf.keras.initializers.he_uniform()
+        
         self.model = Sequential()
         self.model.add(Dense(24, input_shape=obs_shape, activation='relu'))
         self.model.add(Dense(12, activation='relu'))
